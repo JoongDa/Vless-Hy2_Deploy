@@ -399,6 +399,31 @@ def show_links():
         else:
             warn(f"{label} 链接未找到（请先配置）")
 
+def enable_bbr():
+    banner("开启 BBR 拥塞控制")
+    current = run("sysctl net.ipv4.tcp_congestion_control",
+                  capture_output=True, text=True).stdout.strip()
+    info(f"当前算法：{current}")
+    if "bbr" in current:
+        ok("BBR 已经是开启状态，无需重复操作")
+        return
+    c = input("确认开启 BBR？[y/n]：").strip().lower()
+    if c != "y":
+        warn("已取消")
+        return
+    sysctl = Path("/etc/sysctl.conf").read_text()
+    if "default_qdisc=fq" not in sysctl:
+        run('echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf')
+    if "tcp_congestion_control=bbr" not in sysctl:
+        run('echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf')
+    run("sysctl -p", capture_output=True)
+    result = run("sysctl net.ipv4.tcp_congestion_control",
+                 capture_output=True, text=True).stdout.strip()
+    if "bbr" in result:
+        ok(f"BBR 开启成功：{result}")
+    else:
+        err("BBR 开启失败，请检查内核版本（需要 4.9+）")
+
 def uninstall_menu():
     banner("卸载")
     print("1. 卸载 VLESS（Xray）")
@@ -451,21 +476,32 @@ def main():
         print("  │  3. 仅部署 Hysteria2             │")
         print("  │  4. 重启服务                     │")
         print("  │  5. 查看配置                     │")
-        print("  │  6. 卸载                         │")
+        print("  │  6. 开启 BBR                     │")
+        print("  │  7. 卸载                         │")
         print("  │  0. 退出                         │")
         print("  └─────────────────────────────────┘")
 
         c = input("\n请选择：").strip()
         os.system("clear")
 
-        if   c == "1": deploy_all();                        press_enter()
-        elif c == "2": install_xray(); configure_vless();   press_enter()
-        elif c == "3": install_hy2();  configure_hy2();     press_enter()
-        elif c == "4": restart_services();                  press_enter()
-        elif c == "5": show_links();                        press_enter()
-        elif c == "6": uninstall_menu();                    press_enter()
-        elif c == "0": print("已退出"); sys.exit()
-        else:          print("输入错误"); time.sleep(1)
+        if c == "1":
+            deploy_all();                        press_enter()
+        elif c == "2":
+            install_xray(); configure_vless();   press_enter()
+        elif c == "3":
+            install_hy2();  configure_hy2();     press_enter()
+        elif c == "4":
+            restart_services();                  press_enter()
+        elif c == "5":
+            show_links();                        press_enter()
+        elif c == "6":
+            enable_bbr();                        press_enter()
+        elif c == "7":
+            uninstall_menu();                    press_enter()
+        elif c == "0":
+            print("已退出"); sys.exit()
+        else:
+            print("输入错误"); time.sleep(1)
 
 if __name__ == "__main__":
     main()
