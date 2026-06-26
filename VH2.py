@@ -200,11 +200,15 @@ def configure_vless():
     banner("VLESS + XTLS-Vision + Reality 配置")
 
     # 端口
-    port = 443
+def configure_vless():
+    banner("VLESS + XTLS-Vision + Reality 配置")
+
+    # 端口（让用户自己选）
+    port = validate_port("监听端口", default=443)
     r = run(f"ss -tlnp | grep ':{port}'", capture_output=True)
     if r.returncode == 0:
-        warn(f"443 端口已被占用，自动切换到 8443")
-        port = 8443
+        warn(f"{port} 端口已被占用")
+        port = validate_port("请换一个端口", default=8443)
 
     # 生成密钥
     info("生成 Reality 密钥对...")
